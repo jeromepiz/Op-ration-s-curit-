@@ -780,6 +780,7 @@ let state = {
   ],
   secretCode: '',
   winnerTeamId: null,
+  showWinner: false,
 };
 let pinBuffer = '';
 let selectedColor = '#e84040';
@@ -927,7 +928,7 @@ function getTeamTotal(t) {
 }
 function resetAll() {
   if (!confirm('Tout réinitialiser ? Cette action est irréversible.')) return;
-  state = { teams: [], ateliers: [{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' }], secretCode: '', winnerTeamId: null };
+  state = { teams: [], ateliers: [{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' }], secretCode: '', winnerTeamId: null, showWinner: false };
   saveState();
   renderCoord();
   toast('Réinitialisé');
@@ -1389,8 +1390,16 @@ function revealWinner() {
   document.getElementById('winnerPts').textContent = getTeamTotal(winner) + ' points au total';
   spawnConfetti();
   document.getElementById('winnerOverlay').classList.add('show');
+  // Synchroniser avec l'écran TV via Firebase
+  state.showWinner = true;
+  saveState();
 }
-function closeWinner() { document.getElementById('winnerOverlay').classList.remove('show'); }
+function closeWinner() {
+  document.getElementById('winnerOverlay').classList.remove('show');
+  // Fermer aussi l'overlay TV
+  state.showWinner = false;
+  saveState();
+}
 function spawnConfetti() {
   const wrap = document.getElementById('confettiWrap');
   wrap.innerHTML = '';
