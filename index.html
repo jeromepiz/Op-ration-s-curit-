@@ -761,10 +761,49 @@
 const PIN = '2025';
 
 const ATELIERS_DEF = [
-  { id: 0, num: '01', emoji: '🛴', name: 'Le trajet de Kéké', theme: 'Trajet domicile-travail', color: '#0fb58a' },
-  { id: 1, num: '02', emoji: '🚛', name: 'La prise de poste', theme: 'EPI, gestes & postures', color: '#E8680A' },
-  { id: 2, num: '03', emoji: '⚠️', name: "L'incident sur tournée", theme: 'Urgences & premiers secours', color: '#e84040' },
-  { id: 3, num: '04', emoji: '📋', name: 'Le rapport de Kéké', theme: 'Déclaration & procédures', color: '#9b6bff' },
+  { id: 0, num: '01', emoji: '🛴', name: 'Le trajet de Kéké', theme: 'Trajet domicile-travail', color: '#0fb58a',
+    blocks: [
+      { label: 'Questions', questions: [
+        { label: 'Q1 — Combien de manquements ? (4 trouvés)', max: 40 },
+        { label: 'Q2 — Code de la route EDPM / trottoir', max: 20 },
+        { label: 'Q3 — Couverture accident de travail', max: 25 },
+        { label: 'Q4 — Équipement risque vital le plus important', max: 15 },
+      ]}
+    ]
+  },
+  { id: 1, num: '02', emoji: '🚛', name: 'La prise de poste', theme: 'EPI, gestes & postures', color: '#E8680A',
+    blocks: [
+      { label: 'Questions', questions: [
+        { label: 'Q1 — Témoin fiable / peu fiable + justification', max: 20 },
+        { label: 'Q2 — Pièce à conviction identifiée + lien incident', max: 25 },
+        { label: 'Q3 — EPI manquants identifiés', max: 25 },
+        { label: 'Q4 — Procédure de prise de poste correcte', max: 15 },
+        { label: 'Q5 — Risque principal retenu + justification', max: 15 },
+      ]}
+    ]
+  },
+  { id: 2, num: '03', emoji: '⚠️', name: "L'incident sur tournée", theme: 'Urgences & premiers secours', color: '#e84040',
+    blocks: [
+      { label: 'Questions', questions: [
+        { label: 'Q1 — Séquence reconstituée dans le bon ordre', max: 20 },
+        { label: 'Q2 — Causes identifiées (humaines / matérielles)', max: 25 },
+        { label: 'Q3 — Premiers gestes de secours corrects', max: 15 },
+        { label: 'Q4 — Mesures de prévention proposées', max: 25 },
+        { label: 'Q5 — Procédure d\'alerte correcte', max: 15 },
+      ]}
+    ]
+  },
+  { id: 3, num: '04', emoji: '📋', name: 'Le rapport de Kéké', theme: 'Déclaration & procédures', color: '#9b6bff',
+    blocks: [
+      { label: 'Questions', questions: [
+        { label: 'Q1 — Erreurs DAT identifiées (≥ 3)', max: 30 },
+        { label: 'Q2 — Erreurs DUERP identifiées', max: 25 },
+        { label: 'Q3 — Erreurs registre presqu\'accidents', max: 20 },
+        { label: 'Q4 — Délai déclaration AT (48h)', max: 10 },
+        { label: 'Q5 — Conséquences erreurs de déclaration', max: 15 },
+      ]}
+    ]
+  },
 ];
 
 const BONUS_MAX = 150;
@@ -924,7 +963,21 @@ function removeTeam(id) {
   renderCoord();
 }
 function getTeamTotal(t) {
-  return t.scores.reduce((a,b)=>a+b,0) + t.bonus.reduce((a,b)=>a+b,0) + (t.codeBonus || 0);
+  // Calcul depuis scoresDetail si disponible, sinon fallback sur scores
+  let base = 0;
+  const sd = t.scoresDetail ? toArray(t.scoresDetail) : null;
+  if (sd) {
+    sd.forEach(atelierBlocks => {
+      if (!atelierBlocks) return;
+      toArray(atelierBlocks).forEach(block => {
+        if (!block) return;
+        toArray(block).forEach(v => { base += (parseInt(v) || 0); });
+      });
+    });
+  } else {
+    base = toArray(t.scores).reduce((a,b)=>a+(parseInt(b)||0),0);
+  }
+  return base + toArray(t.bonus).reduce((a,b)=>a+(parseInt(b)||0),0) + (t.codeBonus || 0);
 }
 function resetAll() {
   if (!confirm('Tout réinitialiser ? Cette action est irréversible.')) return;
@@ -966,7 +1019,7 @@ function renderCoord() {
         </div>
         <div class="atelier-status ${done ? 'status-done' : 'status-todo'}">${done ? '✓ OK' : 'En attente'}</div>
       </div>
-      ${frag ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Fragment : <span style="color:${a.color};font-weight:700;">${frag}</span></div>` : ''}
+
       <button class="btn-secondary" onclick="openAtelier(${i})" style="width:100%;padding:10px;">
         ${done ? '✏️ Modifier' : '▶ Gérer cet atelier'}
       </button>
@@ -1058,6 +1111,120 @@ function openAtelier(idx) {
   document.getElementById('modalAtelier').style.display = 'block';
 }
 
+// ═══════════ HELPER FIREBASE ARRAY ═══════════
+function toArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  // Firebase convertit les arrays sparse en objets {0:…,1:…}
+  const maxKey = Math.max(...Object.keys(val).map(Number).filter(n => !isNaN(n)));
+  if (maxKey < 0) return [];
+  const arr = [];
+  for (let i = 0; i <= maxKey; i++) arr.push(val[i] !== undefined ? val[i] : null);
+  return arr;
+}
+
+// ═══════════ SCORING PAR QUESTION ═══════════
+let openBlocks = {};
+// scoresDetail local protégé pendant que la modal est ouverte
+let _localScoresDetail = null;
+
+function getScoresDetail(t, idx) {
+  // Pendant que la modal est ouverte, utiliser la copie locale pour l'équipe sélectionnée
+  if (_localScoresDetail !== null && selectedTeamId === t.id) return _localScoresDetail[idx] || [];
+  if (!t.scoresDetail) return null;
+  const sd = toArray(t.scoresDetail);
+  return sd[idx] ? toArray(sd[idx]).map(b => b ? toArray(b) : []) : null;
+}
+
+function initLocalScoresDetail(t, idx) {
+  const def = ATELIERS_DEF[idx];
+  const sd = t.scoresDetail ? toArray(t.scoresDetail) : [];
+  // S'assurer qu'on a 4 slots
+  while (sd.length < 4) sd.push(null);
+  if (!sd[idx]) {
+    sd[idx] = def.blocks.map(b => b.questions.map(() => 0));
+  } else {
+    sd[idx] = toArray(sd[idx]).map((b, bi) =>
+      b ? toArray(b) : def.blocks[bi].questions.map(() => 0)
+    );
+  }
+  _localScoresDetail = sd;
+  return sd[idx];
+}
+
+function calcBlockTotal(idx, bi) {
+  if (!_localScoresDetail) return 0;
+  const blockArr = toArray(_localScoresDetail[idx] || [])[bi];
+  if (!blockArr) return 0;
+  return toArray(blockArr).reduce((s, v) => s + (parseInt(v) || 0), 0);
+}
+
+function calcAtelierTotal(idx) {
+  if (!_localScoresDetail) return 0;
+  const atelierArr = toArray(_localScoresDetail[idx] || []);
+  return atelierArr.reduce((s, block) => {
+    if (!block) return s;
+    return s + toArray(block).reduce((bs, v) => bs + (parseInt(v) || 0), 0);
+  }, 0);
+}
+
+function setQScore(idx, bi, qi, value) {
+  if (selectedTeamId === null || !_localScoresDetail) return;
+  const def = ATELIERS_DEF[idx];
+  const max = def.blocks[bi].questions[qi].max;
+  let v = parseInt(value) || 0;
+  if (v < 0) v = 0;
+  if (v > max) v = max;
+  _localScoresDetail[idx][bi][qi] = v;
+  refreshQTotals(idx, bi);
+}
+
+function onQInput(idx, bi, qi, max, inputEl) {
+  let v = parseInt(inputEl.value) || 0;
+  if (v < 0) v = 0;
+  if (v > max) v = max;
+  setQScore(idx, bi, qi, v);
+  // Mettre à jour les boutons rapides visuellement
+  const qid = `q_${idx}_${bi}_${qi}`;
+  const half = Math.round(max / 2);
+  ['0', String(half), String(max)].forEach((val, i) => {
+    const btn = document.getElementById(`qbtn_${idx}_${bi}_${qi}_${i}`);
+    if (btn) btn.style.background = (String(v) === val) ? 'var(--orange)' : '';
+  });
+}
+
+function quickSet(idx, bi, qi, value, max) {
+  setQScore(idx, bi, qi, value);
+  // Mettre à jour le champ
+  const inp = document.getElementById(`qinp_${idx}_${bi}_${qi}`);
+  if (inp) inp.value = value;
+  // Mettre à jour les boutons
+  const half = Math.round(max / 2);
+  ['0', String(half), String(max)].forEach((val, i) => {
+    const btn = document.getElementById(`qbtn_${idx}_${bi}_${qi}_${i}`);
+    if (btn) btn.style.background = (String(value) === val) ? 'var(--orange)' : '';
+  });
+}
+
+function refreshQTotals(idx, bi) {
+  const blockTotal = calcBlockTotal(idx, bi);
+  const blockEl = document.getElementById(`qblock_total_${idx}_${bi}`);
+  if (blockEl) blockEl.textContent = blockTotal + ' pts';
+  const grandTotal = calcAtelierTotal(idx);
+  const gtEl = document.getElementById('q_grand_total');
+  if (gtEl) gtEl.textContent = grandTotal + ' pts';
+}
+
+function toggleQBlock(idx, bi) {
+  if (!openBlocks[idx]) openBlocks[idx] = {};
+  const cur = openBlocks[idx][bi] !== false; // true par défaut (ouvert)
+  openBlocks[idx][bi] = !cur;
+  const body = document.getElementById(`qblock_body_${idx}_${bi}`);
+  const arrow = document.getElementById(`qblock_arrow_${idx}_${bi}`);
+  if (body) body.style.display = !cur ? 'block' : 'none';
+  if (arrow) arrow.textContent = !cur ? '▾' : '▸';
+}
+
 function renderScorePanel(idx) {
   const si = document.getElementById('scoreInputs');
   if (!state.teams.length) {
@@ -1065,8 +1232,17 @@ function renderScorePanel(idx) {
     return;
   }
   const acColor = ATELIERS_DEF[idx].color;
+  const def = ATELIERS_DEF[idx];
+
+  // Calculer le total max de l'atelier
+  const totalMax = def.blocks.reduce((s, b) => s + b.questions.reduce((qs, q) => qs + q.max, 0), 0);
+
   const teamBtns = state.teams.map(t => {
-    const alreadyScored = t.scores[idx] > 0;
+    const sd = getScoresDetail(t, idx);
+    let teamTotal = 0;
+    if (sd) sd.forEach(block => { if(block) toArray(block).forEach(v => { teamTotal += parseInt(v)||0; }); });
+    else teamTotal = parseInt(toArray(t.scores)[idx]) || 0;
+    const alreadyScored = teamTotal > 0;
     const isSelected = selectedTeamId === t.id;
     return `<button onclick="selectTeamForScore(${t.id}, ${idx})" style="
       width:100%;margin-bottom:8px;padding:12px 14px;
@@ -1077,31 +1253,84 @@ function renderScorePanel(idx) {
       font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--text);">
       <span style="width:12px;height:12px;border-radius:50%;background:${t.color};flex-shrink:0;display:inline-block;"></span>
       <span style="flex:1;text-align:left;">${t.name}</span>
-      ${alreadyScored ? `<span style="font-size:11px;color:var(--teal);">✓ ${t.scores[idx]} pts</span>` : ''}
+      ${alreadyScored ? `<span style="font-size:11px;color:var(--teal);">✓ ${teamTotal} pts</span>` : ''}
       ${isSelected ? `<span style="font-size:12px;color:${acColor};">●</span>` : ''}
     </button>`;
   }).join('');
 
-  let scoreEntry = '';
+  let questionForm = '';
   if (selectedTeamId !== null) {
     const t = state.teams.find(x => x.id === selectedTeamId);
-    scoreEntry = `
+    // Initialiser la copie locale
+    const detail = initLocalScoresDetail(t, idx);
+
+    const blocksHtml = def.blocks.map((block, bi) => {
+      const isOpen = openBlocks[idx] === undefined || openBlocks[idx][bi] !== false;
+      const blockTotal = toArray(detail[bi] || []).reduce((s, v) => s + (parseInt(v)||0), 0);
+      const blockMax = block.questions.reduce((s, q) => s + q.max, 0);
+
+      const questionsHtml = block.questions.map((q, qi) => {
+        const curVal = parseInt((detail[bi] || [])[qi]) || 0;
+        const half = Math.round(q.max / 2);
+        const btnStyle = (val) => `flex:1;padding:6px 0;font-size:12px;border-radius:6px;
+          background:${curVal === val ? 'var(--orange)' : ''};
+          color:${curVal === val ? '#fff' : 'var(--muted)'};`;
+        return `
+          <div style="margin-bottom:10px;padding:10px;background:var(--dark);border-radius:8px;border:1px solid var(--border);">
+            <div style="font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.3;">${q.label}
+              <span style="color:var(--muted);font-size:11px;"> — max ${q.max} pts</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="display:flex;gap:4px;flex:1;">
+                <button id="qbtn_${idx}_${bi}_${qi}_0" onclick="quickSet(${idx},${bi},${qi},0,${q.max})"
+                  class="btn-secondary" style="${btnStyle(0)}">0</button>
+                <button id="qbtn_${idx}_${bi}_${qi}_1" onclick="quickSet(${idx},${bi},${qi},${half},${q.max})"
+                  class="btn-secondary" style="${btnStyle(half)}">½</button>
+                <button id="qbtn_${idx}_${bi}_${qi}_2" onclick="quickSet(${idx},${bi},${qi},${q.max},${q.max})"
+                  class="btn-secondary" style="${btnStyle(q.max)}">max</button>
+              </div>
+              <input type="number" id="qinp_${idx}_${bi}_${qi}" value="${curVal}" min="0" max="${q.max}"
+                oninput="onQInput(${idx},${bi},${qi},${q.max},this)"
+                style="width:56px;margin:0;padding:6px;font-size:14px;text-align:center;
+                background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);">
+              <span style="font-size:11px;color:var(--muted);width:28px;">pts</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div style="margin-bottom:8px;border:1px solid ${acColor}44;border-radius:10px;overflow:hidden;">
+          <div onclick="toggleQBlock(${idx},${bi})" style="
+            display:flex;align-items:center;justify-content:space-between;
+            padding:10px 14px;background:${acColor}11;cursor:pointer;">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">${block.label}</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span id="qblock_total_${idx}_${bi}" style="font-size:13px;font-weight:700;color:${acColor};">${blockTotal} pts</span>
+              <span style="font-size:11px;color:var(--muted);">/ ${blockMax}</span>
+              <span id="qblock_arrow_${idx}_${bi}" style="color:var(--muted);">${isOpen ? '▾' : '▸'}</span>
+            </div>
+          </div>
+          <div id="qblock_body_${idx}_${bi}" style="padding:10px;display:${isOpen ? 'block' : 'none'};">
+            ${questionsHtml}
+          </div>
+        </div>`;
+    }).join('');
+
+    const grandTotal = calcAtelierTotal(idx);
+    questionForm = `
       <div style="margin-top:4px;padding:14px;background:var(--dark2);border-radius:10px;border:1px solid ${acColor}55;">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
           Score pour <span style="color:${t.color};font-weight:700;">${t.name}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-          <input type="number" id="si_active" value="${baseScore}" min="0" max="999"
-            style="flex:1;margin:0;padding:12px;font-size:22px;text-align:center;font-weight:700;
-            background:var(--dark3);border:1.5px solid ${acColor};border-radius:10px;color:var(--text);
-            font-family:'DM Sans',sans-serif;outline:none;">
-          <span style="font-size:13px;color:var(--muted);">pts</span>
-        </div>
-        <div style="display:flex;gap:6px;margin-bottom:12px;">
-          <button onclick="setBase(50)" class="btn-secondary" style="flex:1;padding:8px 0;font-size:12px;">50</button>
-          <button onclick="setBase(100)" class="btn-secondary" style="flex:1;padding:8px 0;font-size:12px;">100</button>
-          <button onclick="setBase(150)" class="btn-secondary" style="flex:1;padding:8px 0;font-size:12px;">150</button>
-          <button onclick="setBase(200)" class="btn-secondary" style="flex:1;padding:8px 0;font-size:12px;">200</button>
+        ${blocksHtml}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          padding:12px 14px;background:var(--dark3);border-radius:10px;margin-bottom:12px;
+          border:1px solid ${acColor}66;">
+          <span style="font-size:13px;font-weight:600;color:var(--text);">Total atelier</span>
+          <div>
+            <span id="q_grand_total" style="font-size:20px;font-weight:700;font-family:'Bebas Neue',sans-serif;color:${acColor};">${grandTotal} pts</span>
+            <span style="font-size:12px;color:var(--muted);"> / ${totalMax}</span>
+          </div>
         </div>
         <button class="btn-primary" style="width:100%" onclick="validateAtelierForTeam()">✓ Valider pour ${t.name}</button>
       </div>`;
@@ -1112,22 +1341,22 @@ function renderScorePanel(idx) {
       Sélectionnez l'équipe à noter
     </div>
     ${teamBtns}
-    ${scoreEntry}`;
+    ${questionForm}`;
 }
 
 function selectTeamForScore(teamId, idx) {
   selectedTeamId = teamId;
-  const t = state.teams.find(x => x.id === teamId);
-  baseScore = t.scores[idx] > 0 ? t.scores[idx] : 100;
+  _localScoresDetail = null; // reset → sera initialisé dans renderScorePanel
   renderScorePanel(idx);
   setTimeout(() => {
-    const el = document.getElementById('si_active');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 50);
+    const form = document.querySelector('[id^="qblock_"]');
+    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 60);
 }
 
 function closeModal() {
   stopChrono();
+  _localScoresDetail = null;
   document.getElementById('modalAtelier').style.display = 'none';
   selectedTeamId = null;
   renderCoord();
@@ -1180,15 +1409,26 @@ function validateAtelierForTeam() {
   const idx = activeAtelierIdx;
   const t = state.teams.find(x => x.id === selectedTeamId);
   if (!t) return;
-  const el = document.getElementById('si_active');
-  const pts = el ? parseInt(el.value) || 0 : 0;
+
+  // Récupérer le total depuis _localScoresDetail
+  const pts = _localScoresDetail ? calcAtelierTotal(idx) : (parseInt(document.getElementById('si_active')?.value) || 0);
+
+  // Sauvegarder scoresDetail dans le state
+  if (_localScoresDetail) {
+    if (!t.scoresDetail) t.scoresDetail = [null, null, null, null];
+    t.scoresDetail[idx] = _localScoresDetail[idx];
+  }
+
   const pct = chronoSecs / ATELIER_TIME;
   const bonus = Math.round(BONUS_MAX * pct);
   t.scores[idx] = pts;
   t.bonus[idx] = pts > 0 ? bonus : 0;
+
   // Marquer l'atelier done si toutes les équipes ont un score
-  const allScored = state.teams.every(tm => tm.scores[idx] > 0);
+  const allScored = state.teams.every(tm => (toArray(tm.scores)[idx] || 0) > 0);
   if (allScored) state.ateliers[idx].done = true;
+
+  _localScoresDetail = null;
   saveState();
   toast(t.name + ' : ' + pts + ' pts + ' + (pts > 0 ? bonus : 0) + ' bonus ✓');
   selectedTeamId = null;
