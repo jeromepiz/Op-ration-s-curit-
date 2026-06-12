@@ -761,49 +761,126 @@
 const PIN = '2025';
 
 const ATELIERS_DEF = [
-  { id: 0, num: '01', emoji: '🛴', name: 'Le trajet de Kéké', theme: 'Trajet domicile-travail', color: '#0fb58a',
-    blocks: [
-      { label: 'Questions', questions: [
-        { label: 'Q1 — Combien de manquements ? (4 trouvés)', max: 40 },
-        { label: 'Q2 — Code de la route EDPM / trottoir', max: 20 },
-        { label: 'Q3 — Couverture accident de travail', max: 25 },
-        { label: 'Q4 — Équipement risque vital le plus important', max: 15 },
-      ]}
-    ]
-  },
-  { id: 1, num: '02', emoji: '🚛', name: 'La prise de poste', theme: 'EPI, gestes & postures', color: '#E8680A',
-    blocks: [
-      { label: 'Questions', questions: [
-        { label: 'Q1 — Témoin fiable / peu fiable + justification', max: 20 },
-        { label: 'Q2 — Pièce à conviction identifiée + lien incident', max: 25 },
-        { label: 'Q3 — EPI manquants identifiés', max: 25 },
-        { label: 'Q4 — Procédure de prise de poste correcte', max: 15 },
-        { label: 'Q5 — Risque principal retenu + justification', max: 15 },
-      ]}
-    ]
-  },
-  { id: 2, num: '03', emoji: '⚠️', name: "L'incident sur tournée", theme: 'Urgences & premiers secours', color: '#e84040',
-    blocks: [
-      { label: 'Questions', questions: [
-        { label: 'Q1 — Séquence reconstituée dans le bon ordre', max: 20 },
-        { label: 'Q2 — Causes identifiées (humaines / matérielles)', max: 25 },
-        { label: 'Q3 — Premiers gestes de secours corrects', max: 15 },
-        { label: 'Q4 — Mesures de prévention proposées', max: 25 },
-        { label: 'Q5 — Procédure d\'alerte correcte', max: 15 },
-      ]}
-    ]
-  },
-  { id: 3, num: '04', emoji: '📋', name: 'Le rapport de Kéké', theme: 'Déclaration & procédures', color: '#9b6bff',
-    blocks: [
-      { label: 'Questions', questions: [
-        { label: 'Q1 — Erreurs DAT identifiées (≥ 3)', max: 30 },
-        { label: 'Q2 — Erreurs DUERP identifiées', max: 25 },
-        { label: 'Q3 — Erreurs registre presqu\'accidents', max: 20 },
-        { label: 'Q4 — Délai déclaration AT (48h)', max: 10 },
-        { label: 'Q5 — Conséquences erreurs de déclaration', max: 15 },
-      ]}
-    ]
-  },
+  { id: 0, num: '01', emoji: '🛴', name: 'Le trajet de Kéké', theme: 'Trajet domicile-travail', color: '#0fb58a' },
+  { id: 1, num: '02', emoji: '🚛', name: 'La prise de poste', theme: 'Web prévention & témoignages', color: '#E8680A' },
+  { id: 2, num: '03', emoji: '⚠️', name: "L'incident sur tournée", theme: 'Bac vert — causes & procédure', color: '#e84040' },
+  { id: 3, num: '04', emoji: '📋', name: 'Le rapport de Kéké', theme: 'DAT, DUER & registre PA', color: '#9b6bff' },
+];
+
+// ── GUIDE QUESTIONS PAR ATELIER ──────────────────────────
+const QUESTIONS_DEF = [
+  // Acte 01 — Le trajet de Kéké (5 points de passage, 100 pts max par point)
+  // Toutes les questions des 5 points sont listées — l'animateur note les questions
+  // correspondant à la photo distribuée à son équipe (rotation sur les 5 points)
+  [
+    // ── POINT 1 — La sortie du domicile ──
+    { num: 'P1-Q1', pts: 30, color: '#0fb58a', label: '📍 P1 — Manquements sécurité',
+      desc: 'Combien de manquements à la sécurité sur la photo ? Listez-les tous.',
+      items: ['+5 pts par manquement (max 30 pts)', 'Pas de casque · Pas de gants · Circulation sur trottoir', 'Gilet HV non attaché · Smartphone visible · Éclairage absent'] },
+    { num: 'P1-Q2', pts: 25, color: '#0fb58a', label: '📍 P1 — EDPM & trottoir',
+      desc: 'Que dit le code de la route sur la circulation des EDPM sur le trottoir ?',
+      items: ['+15 pts : interdit — piste cyclable ou chaussée obligatoire', '+10 pts : vitesse max 25 km/h en ville', '+5 pts partiel'] },
+    { num: 'P1-Q3', pts: 25, color: '#0fb58a', label: '📍 P1 — Accident de trajet',
+      desc: 'Si Kéké chute sur ce trajet, est-il couvert en accident du travail ? Pourquoi ?',
+      items: ['+15 pts : oui — accident de trajet (Art. L411-2 CSS)', '+10 pts : trajet direct sans détour anormal', '+5 pts partiel : oui sans justification'] },
+    { num: 'P1-Q4', pts: 20, color: '#0fb58a', label: '📍 P1 — Équipement vital manquant',
+      desc: 'Quel équipement manquant représente le risque vital le plus important en cas de chute ?',
+      items: ['+20 pts : le casque — traumatisme crânien mortel', '+10 pts : casque cité sans justification', '+5 pts : autre équipement sans identifier le casque'] },
+    // ── POINT 2 — La piste cyclable qui disparaît ──
+    { num: 'P2-Q1', pts: 30, color: '#E8680A', label: '📍 P2 — 2 dangers principaux',
+      desc: 'Identifiez les deux dangers principaux sur la photo et expliquez pourquoi ils mettent Kéké en danger.',
+      items: ['+15 pts : fin piste cyclable — Kéké sur chaussée sans protection', '+15 pts : camion en stationnement — angle mort, risque démarrage', '+5 pts partiel : 1 seul danger avec explication'] },
+    { num: 'P2-Q2', pts: 35, color: '#E8680A', label: '📍 P2 — Vitesse EDPM en ville',
+      desc: 'Vitesse max autorisée pour une EDPM en ville ? À quelle vitesse Kéké devrait-il rouler ici ?',
+      items: ['+20 pts : 25 km/h max en ville', '+15 pts : ici réduire au minimum — fin piste + camion'] },
+    { num: 'P2-Q3', pts: 35, color: '#E8680A', label: '📍 P2 — Dépasser le camion',
+      desc: 'Quelle est la bonne conduite à tenir pour dépasser le camion ?',
+      items: ['+15 pts : vérifier que le camion est à l\'arrêt et le chauffeur conscient', '+10 pts : dépasser à gauche avec distance de sécurité', '+10 pts : se faire voir dans le rétroviseur avant de dépasser'] },
+    // ── POINT 3 — L'angle mort du carrefour ──
+    { num: 'P3-Q1', pts: 35, color: '#e84040', label: '📍 P3 — Angle mort poids lourd',
+      desc: 'Expliquez ce qu\'est un angle mort. Où se situe la zone de danger pour Kéké ?',
+      items: ['+20 pts : zone non visible par le chauffeur dans ses rétroviseurs', '+15 pts : Kéké dans l\'angle mort arrière droit — dangereux au virage à droite'] },
+    { num: 'P3-Q2', pts: 35, color: '#e84040', label: '📍 P3 — Clignotant droit enclenché',
+      desc: 'Le camion a son clignotant droit enclenché. Que va-t-il se passer ? Quel risque pour Kéké ?',
+      items: ['+20 pts : camion tourne à droite — risque d\'écrasement dans l\'angle mort', '+15 pts : Kéké doit s\'arrêter et laisser passer le camion'] },
+    { num: 'P3-Q3', pts: 30, color: '#e84040', label: '📍 P3 — Position de sécurité',
+      desc: 'Quelle position aurait dû adopter Kéké face à un poids lourd à ce carrefour ?',
+      items: ['+15 pts : rester derrière, jamais dans l\'angle mort', '+15 pts : se positionner visible dans le rétroviseur ou attendre'] },
+    // ── POINT 4 — La ruelle pavée mouillée ──
+    { num: 'P4-Q1', pts: 30, color: '#9b6bff', label: '📍 P4 — Risques sol & environnement',
+      desc: 'Listez tous les risques physiques liés au sol et à l\'environnement sur la photo.',
+      items: ['+6 pts par risque (max 30 pts)', 'Pavés glissants mouillés · Plaque d\'égout métal · Ruelle étroite', 'Mauvais éclairage · Sol irrégulier · Passage piéton possible'] },
+    { num: 'P4-Q2', pts: 35, color: '#9b6bff', label: '📍 P4 — Blessures par ordre de gravité',
+      desc: 'En cas de chute ici, indiquer par ordre de gravité les blessures possibles.',
+      items: ['+35 pts ordre correct : traumatisme crânien → fracture → contusion', '+20 pts : traumatisme crânien cité en 1er', '+10 pts partiel : liste sans ordre'] },
+    { num: 'P4-Q3', pts: 35, color: '#9b6bff', label: '📍 P4 — Détour & couverture AT',
+      desc: 'Kéké a pris un chemin plus long. Est-il couvert en accident de trajet ? Pourquoi ?',
+      items: ['+20 pts : oui si détour justifié (courses, enfants) — la loi l\'admet', '+15 pts : non si détour personnel sans raison — rupture du trajet protégé', '+10 pts : répond sans distinguer les deux cas'] },
+    // ── POINT 5 — L'arrivée au dépôt ──
+    { num: 'P5-Q1', pts: 35, color: '#F5C842', label: '📍 P5 — Infractions commises',
+      desc: 'Relevez toutes les infractions commises par Kéké dans cette scène finale.',
+      items: ['+7 pts par infraction (max 35 pts)', 'Trottinette en zone véhicules · N\'emprunte pas l\'entrée piétons', 'Gilet HV non porté · Pas de casque · Zone de manœuvre interdite'] },
+    { num: 'P5-Q2', pts: 35, color: '#F5C842', label: '📍 P5 — EPI zone de manœuvre',
+      desc: 'Citez les EPI obligatoires dans une zone de manœuvre de véhicules.',
+      items: ['+10 pts : gilet haute visibilité', '+10 pts : chaussures de sécurité', '+10 pts : casque', '+5 pts : gants de protection'] },
+    { num: 'P5-Q3', pts: 30, color: '#F5C842', label: '📍 P5 — Interdiction trottinette dépôt',
+      desc: 'Pourquoi est-il interdit de circuler en trottinette dans la zone de manœuvre, même en étant salarié ?',
+      items: ['+15 pts : zone de manœuvre = risque mortel d\'écrasement — règlement intérieur', '+15 pts : EDPM invisible des chauffeurs PL en manœuvre — angle mort permanent'] },
+  ],
+  // Acte 02 — La prise de poste (web prévention)
+  [
+    { num: 'Q1', pts: 15, color: '#0fb58a', label: 'Signalements sur l\'adresse',
+      desc: 'Combien de signalements ? Par qui ? (3 signalements équipage + web prévention service prévention)',
+      items: ['+8 pts : 3 signalements équipage', '+7 pts : web prévention déclenchée en conséquence', '+5 pts : réponse partielle'] },
+    { num: 'Q2', pts: 25, color: '#e84040', label: '3 manquements identifiés',
+      desc: 'Manquements dans les témoignages et pièces ayant conduit à l\'accident',
+      items: ['+8 pts : Kéké a minimisé l\'alerte de Marcel', '+9 pts : Marcel n\'a pas vérifié la prise en compte', '+8 pts : Djibril n\'a pas réagi'] },
+    { num: 'Q3', pts: 20, color: '#E8680A', label: 'Procédure web prévention',
+      desc: 'Que faire quand une web prévention est déclenchée sur une adresse de tournée ?',
+      items: ['+7 pts : en prendre connaissance avant départ', '+7 pts : vérifier avant toute collecte', '+6 pts : ne pas collecter + signaler tablette'] },
+    { num: 'Q4', pts: 20, color: '#9b6bff', label: 'Web prév. non clôturée',
+      desc: 'Que signifie "Statut : EN COURS — NON CLÔTURÉE" pour l\'équipe ?',
+      items: ['+10 pts : anomalie non résolue, consigne toujours active', '+10 pts : ne pas collecter sans vérification', '+5 pts : réponse partielle'] },
+    { num: 'Q5', pts: 20, color: '#e84040', label: 'Question orale — synthèse',
+      desc: 'Si Kéké avait respecté la procédure WP, qu\'est-ce qui aurait changé ?',
+      items: ['+5 pts : contrôle visuel du bac', '+5 pts : identification des parpaings', '+5 pts : refus + signalement chauffeur', '+5 pts : saisie tablette → pas d\'accident'] },
+  ],
+  // Acte 03 — L'incident sur tournée (bac vert)
+  [
+    { num: 'Q1', pts: 20, color: '#0fb58a', label: 'SÉQUENCE — ordre chronologique',
+      desc: 'Remettre les 6 cartes dans le bon ordre',
+      items: ['+20 pts : ordre parfait (Camion → Arrivée bac → Accroche sans contrôle → Bac bascule → KO → Djibril appelle 15)', '+12 pts : 1 erreur', '+6 pts : 2 erreurs'] },
+    { num: 'Q2', pts: 25, color: '#e84040', label: 'CAUSES — 3 vraies parmi 6',
+      desc: '3 vraies causes + 3 fausses pistes',
+      items: ['+8 pts : bac non contrôlé avant accrochage (C1)', '+8 pts : déchets interdits non refusés (C2)', '+9 pts : anomalie non signalée malgré WP active (C3)', '-3 pts si fausse piste retenue (C4/C5/C6)'] },
+    { num: 'Q3', pts: 15, color: '#E8680A', label: '1ère action de Djibril',
+      desc: 'Quelle est la toute première action après la chute de Kéké ?',
+      items: ['+15 pts : PROTÉGER — sécuriser la zone', '+8 pts : ALERTER cité en premier (acceptable mais incomplet)'] },
+    { num: 'Q4', pts: 25, color: '#9b6bff', label: 'PROCÉDURE — ordre PAS',
+      desc: 'Remettre les 5 cartes dans le bon ordre PAS',
+      items: ['+25 pts : Protéger → Alerter → Secourir → Prévenir → Déclarer AT', '+15 pts : 1 erreur', '+8 pts : 2 erreurs', '+20 pts : Alerter/Secourir inversé si justifié'] },
+    { num: 'Q5', pts: 15, color: '#e84040', label: 'Question orale — obligations Kéké',
+      desc: 'Kéké avait vu le bac lourd. Ses 2 obligations + qui contacter ?',
+      items: ['+5 pts : ne pas collecter le bac', '+5 pts : signaler au chauffeur + saisir tablette', '+5 pts : contacter S. MOREAU (service prévention, WP active)'] },
+  ],
+  // Acte 04 — Le rapport de Kéké
+  [
+    { num: 'Q1', pts: 30, color: '#E8680A', label: 'Erreurs sur la DAT',
+      desc: 'Comptez et listez toutes les erreurs sur la DAT (8 erreurs)',
+      items: ['+3 pts par erreur (max 30 pts)', 'Date/heure manquantes · Lieu vague · Lésions minimisées', 'Hospitalisation non cochée · Reprise cochée par erreur', 'Témoins vides · Signature absente · Délai 48h non respecté'] },
+    { num: 'Q2', pts: 20, color: '#e84040', label: 'Kéké hospitalisé non détecté',
+      desc: 'Pourquoi la direction n\'a pas compris que Kéké était hospitalisé ?',
+      items: ['+10 pts : case Hospitalisation non cochée', '+5 pts : case Reprise immédiate cochée', '+5 pts : lésions minimisées "bobo à la tête"'] },
+    { num: 'Q3', pts: 20, color: '#9b6bff', label: 'DUER — risque & mesures',
+      desc: 'Selon le DUER, quel risque est associé ? Quelles mesures ?',
+      items: ['+10 pts : PT1-38 Manutention manuelle — manipulation bacs', '+10 pts : mesures lève-conteneur + surveillance + formation', '+5 pts bonus : PT1-53 cité en complément'] },
+    { num: 'Q4', pts: 15, color: '#0fb58a', label: 'Registre — anomalie bac vert',
+      desc: 'Que révèle le registre sur la gestion de l\'anomalie bac vert ?',
+      items: ['+8 pts : signalement Djibril absent du registre', '+7 pts : web prévention sans entrée registre — manquement traçabilité', '+5 pts : cite registre vide sans lien avec l\'accident'] },
+    { num: 'Q5', pts: 15, color: '#0fb58a', label: 'Synthèse — clôture web prévention',
+      desc: 'Qu\'aurait dû faire le service prévention et l\'équipe pour clôturer la WP ?',
+      items: ['+4 pts : équipe confirme par retour écrit', '+4 pts : consigner anomalie dans registre PA', '+4 pts : clôturer WP après résolution confirmée terrain', '+3 pts : service prévention relance si pas de retour sous 48h'] },
+  ],
 ];
 
 const BONUS_MAX = 150;
@@ -819,7 +896,6 @@ let state = {
   ],
   secretCode: '',
   winnerTeamId: null,
-  showWinner: false,
 };
 let pinBuffer = '';
 let selectedColor = '#e84040';
@@ -963,25 +1039,11 @@ function removeTeam(id) {
   renderCoord();
 }
 function getTeamTotal(t) {
-  // Calcul depuis scoresDetail si disponible, sinon fallback sur scores
-  let base = 0;
-  const sd = t.scoresDetail ? toArray(t.scoresDetail) : null;
-  if (sd) {
-    sd.forEach(atelierBlocks => {
-      if (!atelierBlocks) return;
-      toArray(atelierBlocks).forEach(block => {
-        if (!block) return;
-        toArray(block).forEach(v => { base += (parseInt(v) || 0); });
-      });
-    });
-  } else {
-    base = toArray(t.scores).reduce((a,b)=>a+(parseInt(b)||0),0);
-  }
-  return base + toArray(t.bonus).reduce((a,b)=>a+(parseInt(b)||0),0) + (t.codeBonus || 0);
+  return t.scores.reduce((a,b)=>a+b,0) + t.bonus.reduce((a,b)=>a+b,0) + (t.codeBonus || 0);
 }
 function resetAll() {
   if (!confirm('Tout réinitialiser ? Cette action est irréversible.')) return;
-  state = { teams: [], ateliers: [{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' }], secretCode: '', winnerTeamId: null, showWinner: false };
+  state = { teams: [], ateliers: [{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' },{ done:false,fragment:'' }], secretCode: '', winnerTeamId: null };
   saveState();
   renderCoord();
   toast('Réinitialisé');
@@ -1019,7 +1081,7 @@ function renderCoord() {
         </div>
         <div class="atelier-status ${done ? 'status-done' : 'status-todo'}">${done ? '✓ OK' : 'En attente'}</div>
       </div>
-
+      ${frag ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Fragment : <span style="color:${a.color};font-weight:700;">●●●</span></div>` : ''}
       <button class="btn-secondary" onclick="openAtelier(${i})" style="width:100%;padding:10px;">
         ${done ? '✏️ Modifier' : '▶ Gérer cet atelier'}
       </button>
@@ -1056,7 +1118,10 @@ function openAtelier(idx) {
   document.getElementById('modalAtelierTitle').textContent = a.name;
   document.getElementById('modalAtelierTheme').textContent = a.theme;
   document.getElementById('fragmentInput').value = state.ateliers[idx].fragment || '';
-  baseScore = 100;
+  const hasGuide = QUESTIONS_DEF[idx] && QUESTIONS_DEF[idx].length > 0;
+  baseScore = hasGuide ? 0 : 100;
+  // Vider complètement scoreInputs pour forcer re-rendu du guide au changement d'atelier
+  document.getElementById('scoreInputs').innerHTML = '';
   renderScorePanel(idx);
   resetChrono();
 
@@ -1111,139 +1176,219 @@ function openAtelier(idx) {
   document.getElementById('modalAtelier').style.display = 'block';
 }
 
-// ═══════════ HELPER FIREBASE ARRAY ═══════════
-function toArray(val) {
-  if (!val) return [];
-  if (Array.isArray(val)) return val;
-  // Firebase convertit les arrays sparse en objets {0:…,1:…}
-  const maxKey = Math.max(...Object.keys(val).map(Number).filter(n => !isNaN(n)));
-  if (maxKey < 0) return [];
-  const arr = [];
-  for (let i = 0; i <= maxKey; i++) arr.push(val[i] !== undefined ? val[i] : null);
-  return arr;
-}
-
-// ═══════════ SCORING PAR QUESTION ═══════════
-let openBlocks = {};
-// scoresDetail local protégé pendant que la modal est ouverte
-let _localScoresDetail = null;
-
-function getScoresDetail(t, idx) {
-  // Pendant que la modal est ouverte, utiliser la copie locale pour l'équipe sélectionnée
-  if (_localScoresDetail !== null && selectedTeamId === t.id) return _localScoresDetail[idx] || [];
-  if (!t.scoresDetail) return null;
-  const sd = toArray(t.scoresDetail);
-  return sd[idx] ? toArray(sd[idx]).map(b => b ? toArray(b) : []) : null;
-}
-
-function initLocalScoresDetail(t, idx) {
-  const def = ATELIERS_DEF[idx];
-  const sd = t.scoresDetail ? toArray(t.scoresDetail) : [];
-  // S'assurer qu'on a 4 slots
-  while (sd.length < 4) sd.push(null);
-  if (!sd[idx]) {
-    sd[idx] = def.blocks.map(b => b.questions.map(() => 0));
-  } else {
-    sd[idx] = toArray(sd[idx]).map((b, bi) =>
-      b ? toArray(b) : def.blocks[bi].questions.map(() => 0)
-    );
-  }
-  _localScoresDetail = sd;
-  return sd[idx];
-}
-
-function calcBlockTotal(idx, bi) {
-  if (!_localScoresDetail) return 0;
-  const blockArr = toArray(_localScoresDetail[idx] || [])[bi];
-  if (!blockArr) return 0;
-  return toArray(blockArr).reduce((s, v) => s + (parseInt(v) || 0), 0);
-}
-
-function calcAtelierTotal(idx) {
-  if (!_localScoresDetail) return 0;
-  const atelierArr = toArray(_localScoresDetail[idx] || []);
-  return atelierArr.reduce((s, block) => {
-    if (!block) return s;
-    return s + toArray(block).reduce((bs, v) => bs + (parseInt(v) || 0), 0);
-  }, 0);
-}
-
-function setQScore(idx, bi, qi, value) {
-  if (selectedTeamId === null || !_localScoresDetail) return;
-  const def = ATELIERS_DEF[idx];
-  const max = def.blocks[bi].questions[qi].max;
-  let v = parseInt(value) || 0;
-  if (v < 0) v = 0;
-  if (v > max) v = max;
-  _localScoresDetail[idx][bi][qi] = v;
-  refreshQTotals(idx, bi);
-}
-
-function onQInput(idx, bi, qi, max, inputEl) {
-  let v = parseInt(inputEl.value) || 0;
-  if (v < 0) v = 0;
-  if (v > max) v = max;
-  setQScore(idx, bi, qi, v);
-  // Mettre à jour les boutons rapides visuellement
-  const qid = `q_${idx}_${bi}_${qi}`;
-  const half = Math.round(max / 2);
-  ['0', String(half), String(max)].forEach((val, i) => {
-    const btn = document.getElementById(`qbtn_${idx}_${bi}_${qi}_${i}`);
-    if (btn) btn.style.background = (String(v) === val) ? 'var(--orange)' : '';
-  });
-}
-
-function quickSet(idx, bi, qi, value, max) {
-  setQScore(idx, bi, qi, value);
-  // Mettre à jour le champ
-  const inp = document.getElementById(`qinp_${idx}_${bi}_${qi}`);
-  if (inp) inp.value = value;
-  // Mettre à jour les boutons
-  const half = Math.round(max / 2);
-  ['0', String(half), String(max)].forEach((val, i) => {
-    const btn = document.getElementById(`qbtn_${idx}_${bi}_${qi}_${i}`);
-    if (btn) btn.style.background = (String(value) === val) ? 'var(--orange)' : '';
-  });
-}
-
-function refreshQTotals(idx, bi) {
-  const blockTotal = calcBlockTotal(idx, bi);
-  const blockEl = document.getElementById(`qblock_total_${idx}_${bi}`);
-  if (blockEl) blockEl.textContent = blockTotal + ' pts';
-  const grandTotal = calcAtelierTotal(idx);
-  const gtEl = document.getElementById('q_grand_total');
-  if (gtEl) gtEl.textContent = grandTotal + ' pts';
-}
-
-function toggleQBlock(idx, bi) {
-  if (!openBlocks[idx]) openBlocks[idx] = {};
-  const cur = openBlocks[idx][bi] !== false; // true par défaut (ouvert)
-  openBlocks[idx][bi] = !cur;
-  const body = document.getElementById(`qblock_body_${idx}_${bi}`);
-  const arrow = document.getElementById(`qblock_arrow_${idx}_${bi}`);
-  if (body) body.style.display = !cur ? 'block' : 'none';
-  if (arrow) arrow.textContent = !cur ? '▾' : '▸';
-}
+// ══════════════════════════════════════════════════════════
+// SCORE PANEL — 1 input par question + total calculé en live
+// Principe : chaque question a son propre champ numérique
+// (0 → max). Le total s'affiche en temps réel.
+// L'équipe doit être sélectionnée avant de saisir.
+// ══════════════════════════════════════════════════════════
 
 function renderScorePanel(idx) {
-  const si = document.getElementById('scoreInputs');
-  if (!state.teams.length) {
-    si.innerHTML = '<div class="text-muted">Aucune équipe inscrite</div>';
+  const si       = document.getElementById('scoreInputs');
+  const acColor  = ATELIERS_DEF[idx].color;
+  const questions = QUESTIONS_DEF[idx] || [];
+
+  // ── Structure : rendu 1 seule fois par ouverture de modal ─
+  if (document.getElementById('scoreGuide')) {
+    renderTeamButtons(idx);   // juste rafraîchir les boutons équipes
     return;
   }
+
+  // ── Guide avec 1 input par question ───────────────────────
+  let guideHtml = '';
+  if (questions.length) {
+    const totalMax = questions.reduce((s, q) => s + q.pts, 0);
+
+    // Note spéciale Acte 1 : 5 points, ne noter que les questions du point distribué
+    const acte1Note = idx === 0 ? `
+      <div style="background:var(--dark2);border:1px solid #0fb58a55;border-radius:10px;
+        padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--muted);">
+        <div style="color:#0fb58a;font-weight:700;margin-bottom:4px;">ℹ️ Acte 01 — 5 points de passage</div>
+        Les questions couvrent les <b>5 photos</b> (P1 à P5). Ne notez que les questions
+        correspondant au <b>point distribué à votre équipe</b>. Les autres inputs restent à 0.
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
+          <span style="background:#0fb58a22;color:#0fb58a;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;">P1 — Domicile</span>
+          <span style="background:#E8680A22;color:#E8680A;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;">P2 — Piste cyclable</span>
+          <span style="background:#e8404022;color:#e84040;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;">P3 — Angle mort</span>
+          <span style="background:#9b6bff22;color:#9b6bff;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;">P4 — Ruelle pavée</span>
+          <span style="background:#F5C84222;color:#F5C842;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;">P5 — Arrivée dépôt</span>
+        </div>
+      </div>` : '';
+
+    const qCards = questions.map(q => `
+      <div id="qcard_${q.num}" style="
+        background:var(--dark2);border:1px solid ${q.color}44;
+        border-radius:10px;padding:10px 12px;margin-bottom:8px;
+        transition:border-color 0.2s;">
+
+        <!-- En-tête question -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="background:${q.color}22;color:${q.color};font-size:10px;font-weight:700;
+            padding:2px 8px;border-radius:20px;letter-spacing:1px;">${q.num}</span>
+          <span style="background:${q.color};color:#fff;font-size:10px;font-weight:700;
+            padding:2px 7px;border-radius:20px;">max ${q.pts} pts</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text);flex:1;">${q.label}</span>
+        </div>
+
+        <!-- Barème détaillé -->
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;font-style:italic;">${q.desc}</div>
+        <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px;">
+          ${q.items.map(item => `
+            <div style="font-size:10.5px;color:var(--text);display:flex;gap:5px;align-items:flex-start;">
+              <span style="color:${q.color};flex-shrink:0;margin-top:1px;">▸</span>
+              <span>${item}</span>
+            </div>`).join('')}
+        </div>
+
+        <!-- Saisie score partiel -->
+        <div style="display:flex;align-items:center;gap:8px;background:var(--dark3);
+          border-radius:8px;padding:6px 10px;border:1.5px solid ${q.color}55;">
+          <span style="font-size:11px;color:var(--muted);flex:1;">Points attribués :</span>
+          <!-- Bouton – -->
+          <button onclick="stepQ('${q.num}', -1, ${q.pts})"
+            style="width:28px;height:28px;border-radius:6px;border:1px solid ${q.color}66;
+            background:${q.color}22;color:${q.color};font-size:16px;font-weight:700;
+            cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;">−</button>
+          <!-- Input -->
+          <input type="number" id="qi_${q.num}" value="0" min="0" max="${q.pts}"
+            oninput="clampQ('${q.num}',${q.pts}); recalcTotal(${idx})"
+            onchange="clampQ('${q.num}',${q.pts}); recalcTotal(${idx})"
+            style="width:52px;text-align:center;font-size:18px;font-weight:700;
+            background:transparent;border:none;color:var(--text);
+            font-family:'DM Sans',sans-serif;outline:none;padding:0;">
+          <span style="font-size:11px;color:var(--muted);">/ ${q.pts}</span>
+          <!-- Bouton + -->
+          <button onclick="stepQ('${q.num}', +1, ${q.pts})"
+            style="width:28px;height:28px;border-radius:6px;border:1px solid ${q.color}66;
+            background:${q.color}22;color:${q.color};font-size:16px;font-weight:700;
+            cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1;flex-shrink:0;">+</button>
+          <!-- Bouton MAX -->
+          <button onclick="setMaxQ('${q.num}',${q.pts})"
+            style="padding:4px 8px;border-radius:6px;border:1px solid ${q.color}66;
+            background:${q.color}22;color:${q.color};font-size:10px;font-weight:700;
+            cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;">MAX</button>
+        </div>
+      </div>`).join('');
+
+    guideHtml = `
+      <div style="margin-bottom:16px;">
+        ${acte1Note}
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;
+          letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+          <span style="flex:1;">Notation par question</span>
+          <span style="background:${acColor}22;color:${acColor};
+            font-size:9px;padding:2px 8px;border-radius:20px;font-weight:700;">${totalMax} pts max</span>
+        </div>
+        ${qCards}
+      </div>`;
+  }
+
+  // ── Zone sélection équipe ──────────────────────────────
+  const teamZone = `
+    <div id="teamSelectZone">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+        letter-spacing:1px;margin-bottom:10px;">Sélectionnez l'équipe à noter</div>
+      <div id="teamBtnsList"></div>
+    </div>`;
+
+  // ── Zone total + validation ────────────────────────────
+  const entryZone = `
+    <div id="scoreEntry" style="display:none;margin-top:4px;padding:14px;
+      background:var(--dark2);border-radius:10px;border:1px solid ${acColor}55;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;
+        letter-spacing:1px;margin-bottom:10px;">
+        Total pour <span id="scoreEntryName" style="font-weight:700;"></span>
+      </div>
+      <!-- Total calculé automatiquement -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;
+        margin-bottom:12px;padding:10px;background:var(--dark3);border-radius:10px;
+        border:1.5px solid ${acColor};">
+        <span id="totalDisplay" style="font-size:36px;font-weight:700;color:${acColor};
+          font-family:'Bebas Neue',sans-serif;letter-spacing:2px;transition:transform 0.15s;">0</span>
+        <div>
+          <div style="font-size:11px;color:var(--muted);">points</div>
+          <div id="totalMax" style="font-size:10px;color:var(--muted);">/ 100 max</div>
+        </div>
+      </div>
+      <button onclick="resetQuestionScores(${idx})" style="
+        width:100%;margin-bottom:8px;padding:7px;
+        background:transparent;border:1px solid var(--border);
+        border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer;
+        font-family:'DM Sans',sans-serif;">
+        ↺ Remettre à zéro
+      </button>
+      <button class="btn-primary" style="width:100%" onclick="validateAtelierForTeam()">
+        ✓ Valider le score
+      </button>
+    </div>`;
+
+  si.innerHTML = `<div id="scoreGuide">${guideHtml}</div>${teamZone}${entryZone}`;
+  renderTeamButtons(idx);
+}
+
+// ── Helpers inputs question ────────────────────────────────
+function clampQ(qNum, max) {
+  const el = document.getElementById('qi_' + qNum);
+  if (!el) return;
+  let v = parseInt(el.value) || 0;
+  if (v < 0) v = 0;
+  if (v > max) v = max;
+  el.value = v;
+}
+function stepQ(qNum, delta, max) {
+  const el = document.getElementById('qi_' + qNum);
+  if (!el) return;
+  let v = (parseInt(el.value) || 0) + delta;
+  if (v < 0) v = 0;
+  if (v > max) v = max;
+  el.value = v;
+  // Déclencher recalcul — on a besoin de idx
+  const idx = activeAtelierIdx;
+  if (idx !== null) recalcTotal(idx);
+}
+function setMaxQ(qNum, max) {
+  const el = document.getElementById('qi_' + qNum);
+  if (!el) return;
+  el.value = max;
+  const idx = activeAtelierIdx;
+  if (idx !== null) recalcTotal(idx);
+}
+
+// Recalcule le total en lisant tous les qi_ et met à jour l'affichage
+function recalcTotal(idx) {
+  const questions = QUESTIONS_DEF[idx] || [];
+  if (!questions.length) return;
+  let total = 0;
+  questions.forEach(q => {
+    const el = document.getElementById('qi_' + q.num);
+    total += el ? (parseInt(el.value) || 0) : 0;
+  });
+  baseScore = total;
+  const disp = document.getElementById('totalDisplay');
+  if (disp) {
+    disp.textContent = total;
+    disp.style.transform = 'scale(1.1)';
+    setTimeout(() => { disp.style.transform = 'scale(1)'; }, 150);
+  }
+  // Couleur selon niveau
+  const totalMax = questions.reduce((s, q) => s + q.pts, 0);
+  const pct = totalMax > 0 ? total / totalMax : 0;
+  if (disp) {
+    disp.style.color = pct >= 0.8 ? 'var(--success)' : pct >= 0.5 ? ATELIERS_DEF[idx].color : 'var(--amber)';
+  }
+}
+
+function renderTeamButtons(idx) {
   const acColor = ATELIERS_DEF[idx].color;
-  const def = ATELIERS_DEF[idx];
-
-  // Calculer le total max de l'atelier
-  const totalMax = def.blocks.reduce((s, b) => s + b.questions.reduce((qs, q) => qs + q.max, 0), 0);
-
-  const teamBtns = state.teams.map(t => {
-    const sd = getScoresDetail(t, idx);
-    let teamTotal = 0;
-    if (sd) sd.forEach(block => { if(block) toArray(block).forEach(v => { teamTotal += parseInt(v)||0; }); });
-    else teamTotal = parseInt(toArray(t.scores)[idx]) || 0;
-    const alreadyScored = teamTotal > 0;
-    const isSelected = selectedTeamId === t.id;
+  const listEl  = document.getElementById('teamBtnsList');
+  if (!listEl) return;
+  if (!state.teams.length) {
+    listEl.innerHTML = '<div class="text-muted">Aucune équipe inscrite</div>';
+    return;
+  }
+  listEl.innerHTML = state.teams.map(t => {
+    const alreadyScored = t.scores[idx] > 0;
+    const isSelected    = selectedTeamId === t.id;
     return `<button onclick="selectTeamForScore(${t.id}, ${idx})" style="
       width:100%;margin-bottom:8px;padding:12px 14px;
       display:flex;align-items:center;gap:10px;
@@ -1251,112 +1396,59 @@ function renderScorePanel(idx) {
       border:1.5px solid ${isSelected ? acColor : 'var(--border)'};
       border-radius:10px;cursor:pointer;transition:all 0.15s;
       font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--text);">
-      <span style="width:12px;height:12px;border-radius:50%;background:${t.color};flex-shrink:0;display:inline-block;"></span>
+      <span style="width:12px;height:12px;border-radius:50%;background:${t.color};
+        flex-shrink:0;display:inline-block;"></span>
       <span style="flex:1;text-align:left;">${t.name}</span>
-      ${alreadyScored ? `<span style="font-size:11px;color:var(--teal);">✓ ${teamTotal} pts</span>` : ''}
+      ${alreadyScored ? `<span style="font-size:11px;color:var(--teal);">✓ ${t.scores[idx]} pts</span>` : ''}
       ${isSelected ? `<span style="font-size:12px;color:${acColor};">●</span>` : ''}
     </button>`;
   }).join('');
-
-  let questionForm = '';
-  if (selectedTeamId !== null) {
-    const t = state.teams.find(x => x.id === selectedTeamId);
-    // Initialiser la copie locale
-    const detail = initLocalScoresDetail(t, idx);
-
-    const blocksHtml = def.blocks.map((block, bi) => {
-      const isOpen = openBlocks[idx] === undefined || openBlocks[idx][bi] !== false;
-      const blockTotal = toArray(detail[bi] || []).reduce((s, v) => s + (parseInt(v)||0), 0);
-      const blockMax = block.questions.reduce((s, q) => s + q.max, 0);
-
-      const questionsHtml = block.questions.map((q, qi) => {
-        const curVal = parseInt((detail[bi] || [])[qi]) || 0;
-        const half = Math.round(q.max / 2);
-        const btnStyle = (val) => `flex:1;padding:6px 0;font-size:12px;border-radius:6px;
-          background:${curVal === val ? 'var(--orange)' : ''};
-          color:${curVal === val ? '#fff' : 'var(--muted)'};`;
-        return `
-          <div style="margin-bottom:10px;padding:10px;background:var(--dark);border-radius:8px;border:1px solid var(--border);">
-            <div style="font-size:12px;color:var(--text);margin-bottom:8px;line-height:1.3;">${q.label}
-              <span style="color:var(--muted);font-size:11px;"> — max ${q.max} pts</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div style="display:flex;gap:4px;flex:1;">
-                <button id="qbtn_${idx}_${bi}_${qi}_0" onclick="quickSet(${idx},${bi},${qi},0,${q.max})"
-                  class="btn-secondary" style="${btnStyle(0)}">0</button>
-                <button id="qbtn_${idx}_${bi}_${qi}_1" onclick="quickSet(${idx},${bi},${qi},${half},${q.max})"
-                  class="btn-secondary" style="${btnStyle(half)}">½</button>
-                <button id="qbtn_${idx}_${bi}_${qi}_2" onclick="quickSet(${idx},${bi},${qi},${q.max},${q.max})"
-                  class="btn-secondary" style="${btnStyle(q.max)}">max</button>
-              </div>
-              <input type="number" id="qinp_${idx}_${bi}_${qi}" value="${curVal}" min="0" max="${q.max}"
-                oninput="onQInput(${idx},${bi},${qi},${q.max},this)"
-                style="width:56px;margin:0;padding:6px;font-size:14px;text-align:center;
-                background:var(--dark3);border:1px solid var(--border);border-radius:6px;color:var(--text);">
-              <span style="font-size:11px;color:var(--muted);width:28px;">pts</span>
-            </div>
-          </div>`;
-      }).join('');
-
-      return `
-        <div style="margin-bottom:8px;border:1px solid ${acColor}44;border-radius:10px;overflow:hidden;">
-          <div onclick="toggleQBlock(${idx},${bi})" style="
-            display:flex;align-items:center;justify-content:space-between;
-            padding:10px 14px;background:${acColor}11;cursor:pointer;">
-            <span style="font-size:13px;font-weight:600;color:var(--text);">${block.label}</span>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <span id="qblock_total_${idx}_${bi}" style="font-size:13px;font-weight:700;color:${acColor};">${blockTotal} pts</span>
-              <span style="font-size:11px;color:var(--muted);">/ ${blockMax}</span>
-              <span id="qblock_arrow_${idx}_${bi}" style="color:var(--muted);">${isOpen ? '▾' : '▸'}</span>
-            </div>
-          </div>
-          <div id="qblock_body_${idx}_${bi}" style="padding:10px;display:${isOpen ? 'block' : 'none'};">
-            ${questionsHtml}
-          </div>
-        </div>`;
-    }).join('');
-
-    const grandTotal = calcAtelierTotal(idx);
-    questionForm = `
-      <div style="margin-top:4px;padding:14px;background:var(--dark2);border-radius:10px;border:1px solid ${acColor}55;">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
-          Score pour <span style="color:${t.color};font-weight:700;">${t.name}</span>
-        </div>
-        ${blocksHtml}
-        <div style="display:flex;align-items:center;justify-content:space-between;
-          padding:12px 14px;background:var(--dark3);border-radius:10px;margin-bottom:12px;
-          border:1px solid ${acColor}66;">
-          <span style="font-size:13px;font-weight:600;color:var(--text);">Total atelier</span>
-          <div>
-            <span id="q_grand_total" style="font-size:20px;font-weight:700;font-family:'Bebas Neue',sans-serif;color:${acColor};">${grandTotal} pts</span>
-            <span style="font-size:12px;color:var(--muted);"> / ${totalMax}</span>
-          </div>
-        </div>
-        <button class="btn-primary" style="width:100%" onclick="validateAtelierForTeam()">✓ Valider pour ${t.name}</button>
-      </div>`;
-  }
-
-  si.innerHTML = `
-    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">
-      Sélectionnez l'équipe à noter
-    </div>
-    ${teamBtns}
-    ${questionForm}`;
 }
 
 function selectTeamForScore(teamId, idx) {
   selectedTeamId = teamId;
-  _localScoresDetail = null; // reset → sera initialisé dans renderScorePanel
-  renderScorePanel(idx);
+  const t        = state.teams.find(x => x.id === teamId);
+  const questions = QUESTIONS_DEF[idx] || [];
+
+  // Remettre tous les qi_ à 0 (nouvelle notation)
+  questions.forEach(q => {
+    const el = document.getElementById('qi_' + q.num);
+    if (el) el.value = 0;
+  });
+  baseScore = 0;
+
+  // Afficher la zone total
+  const entryEl = document.getElementById('scoreEntry');
+  const nameEl  = document.getElementById('scoreEntryName');
+  const dispEl  = document.getElementById('totalDisplay');
+  const maxEl   = document.getElementById('totalMax');
+  if (entryEl) entryEl.style.display = 'block';
+  if (nameEl)  { nameEl.textContent = t.name; nameEl.style.color = t.color; }
+  if (dispEl)  { dispEl.textContent = '0'; dispEl.style.color = ATELIERS_DEF[idx].color; }
+  if (maxEl)   { maxEl.textContent = '/ ' + questions.reduce((s,q)=>s+q.pts,0) + ' pts max'; }
+
+  renderTeamButtons(idx);
+
   setTimeout(() => {
-    const form = document.querySelector('[id^="qblock_"]');
-    if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 60);
+    const el = document.getElementById('scoreEntry');
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 50);
+}
+
+// Remet tous les inputs question à 0
+function resetQuestionScores(idx) {
+  (QUESTIONS_DEF[idx] || []).forEach(q => {
+    const el = document.getElementById('qi_' + q.num);
+    if (el) el.value = 0;
+  });
+  baseScore = 0;
+  const disp = document.getElementById('totalDisplay');
+  if (disp) { disp.textContent = '0'; disp.style.color = ATELIERS_DEF[idx].color; }
+  toast('Score remis à zéro');
 }
 
 function closeModal() {
   stopChrono();
-  _localScoresDetail = null;
   document.getElementById('modalAtelier').style.display = 'none';
   selectedTeamId = null;
   renderCoord();
@@ -1407,32 +1499,48 @@ function updateChronoDisplay() {
 function validateAtelierForTeam() {
   if (activeAtelierIdx === null || selectedTeamId === null) { toast('Sélectionnez une équipe', true); return; }
   const idx = activeAtelierIdx;
-  const t = state.teams.find(x => x.id === selectedTeamId);
+  const t   = state.teams.find(x => x.id === selectedTeamId);
   if (!t) return;
 
-  // Récupérer le total depuis _localScoresDetail
-  const pts = _localScoresDetail ? calcAtelierTotal(idx) : (parseInt(document.getElementById('si_active')?.value) || 0);
-
-  // Sauvegarder scoresDetail dans le state
-  if (_localScoresDetail) {
-    if (!t.scoresDetail) t.scoresDetail = [null, null, null, null];
-    t.scoresDetail[idx] = _localScoresDetail[idx];
+  // Pour les ateliers avec guide questions : baseScore est calculé par recalcTotal
+  // Pour les ateliers sans guide : lire si_active si disponible
+  const questions = QUESTIONS_DEF[idx] || [];
+  let pts;
+  if (questions.length) {
+    // Recalculer une dernière fois depuis les inputs qi_ pour être sûr
+    pts = 0;
+    questions.forEach(q => {
+      const el = document.getElementById('qi_' + q.num);
+      pts += el ? (parseInt(el.value) || 0) : 0;
+    });
+  } else {
+    const el = document.getElementById('si_active');
+    pts = el ? parseInt(el.value) || 0 : 0;
   }
 
-  const pct = chronoSecs / ATELIER_TIME;
+  const pct   = chronoSecs / ATELIER_TIME;
   const bonus = Math.round(BONUS_MAX * pct);
   t.scores[idx] = pts;
-  t.bonus[idx] = pts > 0 ? bonus : 0;
+  t.bonus[idx]  = pts > 0 ? bonus : 0;
 
   // Marquer l'atelier done si toutes les équipes ont un score
-  const allScored = state.teams.every(tm => (toArray(tm.scores)[idx] || 0) > 0);
+  const allScored = state.teams.every(tm => tm.scores[idx] > 0);
   if (allScored) state.ateliers[idx].done = true;
-
-  _localScoresDetail = null;
   saveState();
   toast(t.name + ' : ' + pts + ' pts + ' + (pts > 0 ? bonus : 0) + ' bonus ✓');
+
+  // Réinitialiser pour la prochaine équipe
   selectedTeamId = null;
-  renderScorePanel(idx);
+  questions.forEach(q => {
+    const el = document.getElementById('qi_' + q.num);
+    if (el) el.value = 0;
+  });
+  baseScore = 0;
+  const disp = document.getElementById('totalDisplay');
+  if (disp) { disp.textContent = '0'; disp.style.color = ATELIERS_DEF[idx].color; }
+  const entryEl = document.getElementById('scoreEntry');
+  if (entryEl) entryEl.style.display = 'none';
+  renderTeamButtons(idx);
 }
 
 function validateAtelier() {
@@ -1630,16 +1738,8 @@ function revealWinner() {
   document.getElementById('winnerPts').textContent = getTeamTotal(winner) + ' points au total';
   spawnConfetti();
   document.getElementById('winnerOverlay').classList.add('show');
-  // Synchroniser avec l'écran TV via Firebase
-  state.showWinner = true;
-  saveState();
 }
-function closeWinner() {
-  document.getElementById('winnerOverlay').classList.remove('show');
-  // Fermer aussi l'overlay TV
-  state.showWinner = false;
-  saveState();
-}
+function closeWinner() { document.getElementById('winnerOverlay').classList.remove('show'); }
 function spawnConfetti() {
   const wrap = document.getElementById('confettiWrap');
   wrap.innerHTML = '';
