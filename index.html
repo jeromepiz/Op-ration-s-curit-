@@ -33,16 +33,27 @@
 
   // Écouter les changements en temps réel
   const stateRef = ref(db, 'gameState');
+  let lastRevealTs = 0; // anti-doublon
+
   onValue(stateRef, (snapshot) => {
     const data = snapshot.val();
     if (data) {
-      // Mettre à jour le state local sans boucle infinie
       state = data;
-      // Rafraîchir l'interface si on est sur le leaderboard ou coord
-      const lb = document.getElementById('leaderboard');
+      // Rafraîchir l'interface
+      const lb    = document.getElementById('leaderboard');
       const coord = document.getElementById('coord');
-      if (lb && lb.classList.contains('active')) refreshLeaderboard();
+      if (lb    && lb.classList.contains('active'))    refreshLeaderboard();
       if (coord && coord.classList.contains('active')) renderCoord();
+
+      // ── Déclencher révélation finale sur l'écran public ──
+      if (data.finalReveal && data.finalReveal.ts && data.finalReveal.ts !== lastRevealTs) {
+        lastRevealTs = data.finalReveal.ts;
+        // Déclencher uniquement si on est sur l'écran leaderboard (écran public)
+        if (lb && lb.classList.contains('active')) {
+          const winner = state.teams && state.teams.find(t => t.id === data.finalReveal.winnerId);
+          if (winner) triggerFinalRevealOnLB(winner);
+        }
+      }
     }
   });
 
@@ -1734,12 +1745,46 @@ function revealWinner() {
   const sorted = [...state.teams].sort((a,b) => getTeamTotal(b) - getTeamTotal(a));
   if (!sorted.length) { toast('Aucune équipe inscrite', true); return; }
   const winner = sorted[0];
+
+  // Afficher localement
+  showWinnerOverlay(winner);
+
+  // Broadcaster vers Firebase pour déclencher sur l'écran public
+  state.finalReveal = { ts: Date.now(), winnerId: winner.id };
+  saveState();
+  toast('Révélation finale diffusée sur l\'écran public 📺');
+}
+
+function showWinnerOverlay(winner) {
   document.getElementById('winnerName').textContent = winner.name.toUpperCase();
   document.getElementById('winnerPts').textContent = getTeamTotal(winner) + ' points au total';
   spawnConfetti();
+  playWinnerSound();
   document.getElementById('winnerOverlay').classList.add('show');
 }
-function closeWinner() { document.getElementById('winnerOverlay').classList.remove('show'); }
+
+function closeWinner() {
+  document.getElementById('winnerOverlay').classList.remove('show');
+}
+
+function playWinnerSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Fanfare montante
+    const notes = [523, 659, 784, 1047, 1319, 1568];
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.35);
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + i * 0.1 + 0.4);
+    });
+  } catch(e) {}
+}
 function spawnConfetti() {
   const wrap = document.getElementById('confettiWrap');
   wrap.innerHTML = '';
@@ -1750,6 +1795,149 @@ function spawnConfetti() {
     c.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*-20}%;background:${colors[i%colors.length]};width:${6+Math.random()*8}px;height:${10+Math.random()*10}px;animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*2}s;`;
     wrap.appendChild(c);
   }
+}
+
+// ── Animation révélation finale sur écran public (leaderboard) ──
+function triggerFinalRevealOnLB(winner) {
+  // Créer un overlay plein écran de compte à rebours dramatique
+  let overlay = document.getElementById('lbRevealOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'lbRevealOverlay';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:300;
+      background:rgba(10,10,16,0.97);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:30px;
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  // Phase 1 : glitch "ACCÈS AUTORISÉ"
+  overlay.innerHTML = `
+    <div id="lbRevealGlitch" style="
+      font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:6px;
+      color:#E8680A;text-shadow:0 0 30px #E8680A88;
+      animation:glitchPulse 0.3s infinite;
+    ">⬛ DÉCODAGE FINAL ⬛</div>
+    <div style="font-size:14px;color:var(--muted);margin-top:16px;letter-spacing:3px;">TRAITEMENT EN COURS…</div>
+    <div id="lbRevealBar" style="
+      width:280px;height:4px;background:var(--dark3);border-radius:2px;margin-top:24px;overflow:hidden;
+    "><div id="lbRevealBarFill" style="height:100%;width:0%;background:#E8680A;transition:width 0.05s linear;border-radius:2px;"></div></div>
+  `;
+  overlay.style.display = 'flex';
+
+  // Ajouter le style glitch si pas déjà présent
+  if (!document.getElementById('revealStyles')) {
+    const st = document.createElement('style');
+    st.id = 'revealStyles';
+    st.textContent = `
+      @keyframes glitchPulse {
+        0%   { transform:skewX(0deg)   translateX(0);    opacity:1;   }
+        20%  { transform:skewX(-2deg)  translateX(-3px); opacity:0.8; }
+        40%  { transform:skewX(2deg)   translateX(3px);  opacity:1;   }
+        60%  { transform:skewX(-1deg)  translateX(-2px); opacity:0.9; }
+        80%  { transform:skewX(0deg)   translateX(0);    opacity:1;   }
+        100% { transform:skewX(1deg)   translateX(2px);  opacity:0.85;}
+      }
+      @keyframes zoomIn {
+        from { transform:scale(0.5); opacity:0; }
+        to   { transform:scale(1);   opacity:1; }
+      }
+      @keyframes lbWinnerPulse {
+        0%,100% { text-shadow: 0 0 30px #f5c842, 0 0 60px #f5c84266; }
+        50%      { text-shadow: 0 0 60px #f5c842, 0 0 120px #f5c842aa, 0 0 200px #f5c84244; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Remplir la barre de progression
+  let pct = 0;
+  const barInterval = setInterval(() => {
+    pct = Math.min(pct + 1.2, 100);
+    const fill = document.getElementById('lbRevealBarFill');
+    if (fill) fill.style.width = pct + '%';
+    if (pct >= 100) clearInterval(barInterval);
+  }, 45);
+
+  // Phase 2 après 3s : compte à rebours 3-2-1
+  setTimeout(() => {
+    let count = 3;
+    overlay.innerHTML = `
+      <div id="lbCountNum" style="
+        font-family:'Bebas Neue',sans-serif;font-size:180px;color:#E8680A;
+        line-height:1;animation:zoomIn 0.3s ease;
+        text-shadow:0 0 60px #E8680A88;
+      ">${count}</div>
+    `;
+
+    const countdown = setInterval(() => {
+      count--;
+      const el = document.getElementById('lbCountNum');
+      if (count > 0) {
+        if (el) { el.textContent = count; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = 'zoomIn 0.3s ease'; }
+        // Son tick
+        try {
+          const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+          const osc2 = ctx2.createOscillator(); const g2 = ctx2.createGain();
+          osc2.connect(g2); g2.connect(ctx2.destination);
+          osc2.frequency.value = 440; osc2.type = 'sine';
+          g2.gain.setValueAtTime(0.2, ctx2.currentTime);
+          g2.gain.exponentialRampToValueAtTime(0.001, ctx2.currentTime + 0.15);
+          osc2.start(ctx2.currentTime); osc2.stop(ctx2.currentTime + 0.2);
+        } catch(e) {}
+      } else {
+        clearInterval(countdown);
+
+        // Phase 3 : révélation du gagnant
+        overlay.innerHTML = `
+          <div class="confetti-wrap" id="lbConfettiWrap"></div>
+          <div style="font-size:90px;margin-bottom:16px;animation:bounce 0.8s ease infinite alternate;">🏆</div>
+          <div style="font-size:12px;letter-spacing:4px;text-transform:uppercase;color:#E8680A;margin-bottom:12px;">
+            L'ENQUÊTE EST RÉSOLUE
+          </div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:4px;
+            color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Félicitations à</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:62px;color:#f5c842;
+            letter-spacing:2px;line-height:1;animation:lbWinnerPulse 1.5s ease infinite;">
+            ${winner.name.toUpperCase()}
+          </div>
+          <div style="font-size:16px;color:var(--muted);margin-top:12px;">
+            ${getTeamTotal(winner)} points au total
+          </div>
+        `;
+
+        // Confettis sur l'écran public
+        const lbConfetti = document.getElementById('lbConfettiWrap');
+        if (lbConfetti) {
+          const colors = ['#E8680A','#f5c842','#0fb58a','#9b6bff','#e84040','#38bdf8'];
+          for (let i = 0; i < 80; i++) {
+            const c = document.createElement('div');
+            c.className = 'confetto';
+            c.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*-20}%;background:${colors[i%colors.length]};width:${6+Math.random()*10}px;height:${10+Math.random()*12}px;animation-duration:${2+Math.random()*4}s;animation-delay:${Math.random()*2}s;`;
+            lbConfetti.appendChild(c);
+          }
+        }
+
+        // Fanfare
+        playWinnerSound();
+
+        // Bouton fermer après 2s
+        setTimeout(() => {
+          const btn = document.createElement('button');
+          btn.className = 'btn-secondary mt16';
+          btn.style.cssText = 'position:relative;z-index:2;margin-top:24px;';
+          btn.textContent = 'Voir le classement';
+          btn.onclick = () => {
+            overlay.style.display = 'none';
+            refreshLeaderboard();
+          };
+          overlay.appendChild(btn);
+        }, 2000);
+      }
+    }, 1000);
+  }, 3000);
 }
 
 // ═══════════ LEADERBOARD ═══════════
