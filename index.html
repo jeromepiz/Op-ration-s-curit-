@@ -1751,6 +1751,7 @@ function revealWinner() {
 
   // Broadcaster vers Firebase pour déclencher sur l'écran public
   state.finalReveal = { ts: Date.now(), winnerId: winner.id };
+  state.showWinner = true;
   saveState();
   toast('Révélation finale diffusée sur l\'écran public 📺');
 }
@@ -1765,6 +1766,8 @@ function showWinnerOverlay(winner) {
 
 function closeWinner() {
   document.getElementById('winnerOverlay').classList.remove('show');
+  state.showWinner = false;
+  saveState();
 }
 
 function playWinnerSound() {
